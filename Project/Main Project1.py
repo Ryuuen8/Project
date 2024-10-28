@@ -26,9 +26,9 @@ class SharedData:
 
 class IntroWindow:
     def __init__(self, root, shared_data):
-        self.icon = PhotoImage(file='Images\eye.png')
+        self.icon = PhotoImage(file=r'Images\eye.png')
 
-        self.img = Image.open('Images\eye.png')
+        self.img = Image.open(r'Images\eye.png')
         self.resized_image = self.img.resize((70, 50))
         self.image = ImageTk.PhotoImage(self.resized_image)
 
@@ -98,7 +98,7 @@ class IntroWindow:
         self.hide_widgets([self.intro_label, self.main_button_frame1, self.next_button1])
 
 class TimerWindow:
-    def __init__(self, root, shared_Data):
+    def __init__(self, root, shared_data):
         self.root = root
         self.shared_data = shared_data
         self.root.geometry("380x200")
@@ -208,6 +208,7 @@ class TimerWindow:
         elif self.elapsed_time <= 0:
             self.main_label.configure(text="Time's Up")
             self.pop_up_window = TimeUp(self.root, self.shared_data)
+            self.root.withdraw()
             if self.shared_data.current_song and os.path.exists(self.shared_data.current_song):
                 pygame.mixer.music.load(self.shared_data.current_song)
                 pygame.mixer.music.play()
@@ -275,19 +276,413 @@ class TimerWindow:
 
 
 class TimeUp:
-    def __init__(self, root, timer_window):
+    def __init__(self, root, shared_data):
         self.root = Toplevel(root)
-        self.timer_window = timer_window
+        self.shared_data = shared_data
         self.root.geometry("400x250")
+        self.center_window(400, 250)       
         self.root.configure(bg="#d9a7e0")
-        pygame.init()  
+        self.root.attributes("-topmost", True)
+        pygame.init()
 
-        self.tu_frame = ctk.CTkFrame(self.root, fg_color="#e6c9f5", height=200, width=300)
+        self.tu_frame = ctk.CTkFrame(self.root, fg_color="#e6c9f5", height=150, width=300)
         self.tu_frame.place(relx=0.5, rely=0.5, anchor="center")
         
+        self.tu_label = ctk.CTkLabel(self.tu_frame, text=r"TIME'S UP", text_color="#000000", font=("Arial", 40, "bold"))
+        self.tu_label.place(relx=0.5, rely=0.5, anchor="center")
+        
+        self.tu_dismiss = ctk.CTkButton(self.tu_frame, fg_color="#e6c9f5", text="Dismiss", text_color="#000000", font=("Arial", 14), border_width=1, border_color="#000000",
+                                        command=self.dismiss)
+        self.tu_dismiss.place(relx=0.5, rely=0.8, anchor="center")
+        
+        self.skip_button = ctk.CTkButton(self.root, text="Skip", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 16))
+        self.skip_button.place(relx=0.7, rely=0.9, anchor="center")
+        
+    def dismiss(self):
+        self.hide_widgets([self.tu_frame, self.skip_button])
+        pygame.mixer.music.stop()
+        self.close_eye = ClosEye(self.root, self.shared_data)
+        self.root.withdraw()
+        
+    def hide_widgets(self, widgets):
+        for widget in widgets:
+            widget.place_forget()
+            
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
 
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+            
+class ClosEye:
+    def __init__(self, root, shared_data):
+        self.root = Toplevel(root)
+        self.root.geometry("400x250")
+        self.shared_data = shared_data
+        self.center_window(400, 250)
+        self.root.configure(bg="#d9a7e0")
+        
+        self.running = False
+        self.elapsed_time = 20
+        self.timer_running = False
+        
+        pygame.init()
+        
+        self.ce_frame = ctk.CTkFrame(self.root, fg_color="#e6c9f5", height=150, width=300)
+        self.ce_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        self.ce_label = ctk.CTkLabel(self.ce_frame, text="CLOSE YOUR EYES", text_color="#000000", font=("Arial", 25, "bold"))
+        self.ce_label.place(relx=0.5, rely=0.4, anchor="center")
+        
+        self.ce_timer = ctk.CTkButton(self.ce_frame, text="00:00:20", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 20, "bold"),command=self.ce_start, height=50)
+        self.ce_timer.place(relx=0.5, rely=0.7, anchor="center")
+        
+        self.skip_button = ctk.CTkButton(self.root, text="Skip", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 16), command=self.skip)
+        self.skip_button.place(relx=0.7, rely=0.9, anchor="center")
+        
+    def skip(self):
+        self.hide_widgets = ([self.ce_frame, self.skip_button])
+        self.la_window = LookAway(self.root, self.shared_data)
+        self.root.withdraw()
+        
+    def hide_widgets(self, widgets):
+        for widget in widgets:
+            widget.place_forget()
+        
+    def ce_start(self):
+        if not self.running:
+            self.timer_running = True
+            if self.elapsed_time <= 0:
+                return
+            self.running = True
+            self.update_timer()
+                
+    def update_timer(self):
+        if self.running and self.elapsed_time > 0:
+            self.elapsed_time -= 1
+            self.ce_timer.configure(text=self.format_time(self.elapsed_time))
+            self.root.after(1000, self.update_timer)
+        elif self.elapsed_time <= 0:
+            self.ce_timer.configure(text="Time's Up!!!!")
+            self.ce_label.configure(text="OPEN YOUR EYES NOW!!", font=("Arial", 20, "bold"))
+            pygame.mixer.music.load("Musics/telolet_rem_truk_bus.mp3")
+            pygame.mixer.music.play()
+        else:
+            self.running = False
+                
+    def format_time(self, elapsed_time):
+        hours, remainder = divmod(elapsed_time, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
     
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
 
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+    
+class LookAway:
+    def __init__(self,root, shared_data):
+        self.root = Toplevel(root)
+        self.shared_data = shared_data
+        self.root.geometry("400x250")
+        self.center_window(400, 250)
+        self.root.configure(bg="#d9a7e0")
+        
+        self.running = False
+        self.elapsed_time = 20
+        self.timer_running = False
+        
+        self.la_frame = ctk.CTkFrame(self.root, fg_color="#e6c9f5", height=150, width=300)
+        self.la_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        self.la_label = ctk.CTkLabel(self.la_frame, text="LOOK 20FT AWAY", text_color="#000000", font=("Arial", 25, "bold"), fg_color="#e6c9f5")
+        self.la_label.place(relx=0.5, rely=0.4, anchor="center")
+        
+        
+        self.la_timer = ctk.CTkButton(self.la_frame, text="00:00:20", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 20, "bold"),command=self.la_start, height=50)
+        self.la_timer.place(relx=0.5, rely=0.7, anchor="center")
+        
+        self.skip_button = ctk.CTkButton(self.root, text="Skip", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 16), command=self.skip)
+        self.skip_button.place(relx=0.7, rely=0.9, anchor="center")
+        
+    def skip(self):
+        self.hide_widgets = ([self.la_frame, self.skip_button])
+        self.r_window = Recommendation(self.root, self.shared_data)
+        self.root.withdraw()
+        
+    def hide_widgets(self, widgets):
+        for widget in widgets:
+            widget.place_forget()
+        
+    def la_start(self):
+        if not self.running:
+            self.timer_running = True
+            if self.elapsed_time <= 0:
+                return
+            self.running = True
+            self.update_timer()
+                
+    def update_timer(self):
+        if self.running and self.elapsed_time > 0:
+            self.elapsed_time -= 1
+            self.la_timer.configure(text=self.format_time(self.elapsed_time))
+            self.root.after(1000, self.update_timer)
+        elif self.elapsed_time <= 0:
+            self.la_timer.configure(text=r"TIME'S UP!")
+            pygame.mixer.music.load("Musics/telolet_rem_truk_bus.mp3")
+            pygame.mixer.music.play()
+        else:
+            self.running = False
+            
+    def format_time(self, elapsed_time):
+        hours, remainder = divmod(elapsed_time, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
+    
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+    
+    
+    
+class Recommendation:
+    def __init__(self, root, shared_data):
+        self.root = Toplevel(root)
+        self.shared_data = shared_data
+        self.root.geometry("500x350")
+        self.center_window(500, 350)
+        self.root.configure(bg="#d9a7e0")
+        
+        self.running = False
+        self.elapsed_time = 20
+        self.timer_running = False
+        
+        self.r_frame = ctk.CTkFrame(self.root, height=250, width=350, fg_color="#e6c9f5")
+        self.r_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        self.r_label = ctk.CTkLabel(self.r_frame, text="We Recommend Resting Away \nFrom Gadgets For:\n", font=("Arial", 20,"bold"))
+        self.r_label.place(relx=0.5, rely=0.2, anchor="center")
+        
+        self.r_recommend = ctk.CTkLabel(self.r_frame,text="• Zero Eye Stain\n• Better Focus\n• Better Productivity", font=("Arial", 20), justify="left")
+        self.r_recommend.place(relx=0.3, rely=0.4, anchor="center")
+        
+        self.r_timer = ctk.CTkButton(self.r_frame, text="00:00:20", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 20, "bold"),command=self.r_start, height=50)
+        self.r_timer.place(relx=0.5, rely=0.7, anchor="center")
+        
+        self.skip_button = ctk.CTkButton(self.root, text="Skip", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 16), command=self.skip)
+        self.skip_button.place(relx=0.7, rely=0.93, anchor="center")
+        
+    def skip(self):
+        self.hide_widgets = ([self.r_frame, self.skip_button])
+        self.o_window = Option(self.root, self.shared_data)
+        self.root.withdraw()
+        
+    def hide_widgets(self, widgets):
+        for widget in widgets:
+            widget.place_forget()
+        
+    def r_start(self):
+        if not self.running:
+            self.timer_running = True
+            if self.elapsed_time <= 0:
+                return
+            self.running = True
+            self.update_timer()
+                
+    def update_timer(self):
+        if self.running and self.elapsed_time > 0:
+            self.elapsed_time -= 1
+            self.r_timer.configure(text=self.format_time(self.elapsed_time))
+            self.root.after(1000, self.update_timer)
+        elif self.elapsed_time <= 0:
+            self.r_timer.configure(text=r"TIME'S UP!")
+            pygame.mixer.music.load("Musics/telolet_rem_truk_bus.mp3")
+            pygame.mixer.music.play()
+        else:
+            self.running = False
+            
+    def format_time(self, elapsed_time):
+        hours, remainder = divmod(elapsed_time, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
+    
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        
+class Option:
+    def __init__(self,root, shared_data):
+        self.root = Toplevel(root)
+        self.shared_data = shared_data
+        self.root.geometry("500x300")
+        self.center_window(500, 300)
+        self.root.configure(bg="#d9a7e0")
+        
+        self.o_frame = ctk.CTkFrame(self.root, height=200, width=400,  fg_color="#e6c9f5")
+        self.o_frame.place(rely=0.5, relx=0.5, anchor="center")
+        
+        self.o_label = ctk.CTkLabel(self.o_frame, text=r"Let's take care of your eyes again!", font=("Arial", 24, "bold"))
+        self.o_label.place(relx=0.5, rely=0.1, anchor="center")
+        
+        self.o_yes = ctk.CTkButton(self.o_frame, text="Yes", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 18, "bold"),width=70, height=70, 
+                                   border_width=2, border_color="#000000", command=self.yes_button)
+        self.o_yes.place(rely=0.4, relx=0.2, anchor="center")
+            
+        self.yes_label = ctk.CTkLabel(self.o_frame, text="Let's take care \nof my eyes", text_color="#000000")
+        self.yes_label.place(rely=0.65, relx=0.2, anchor="center")
+        
+        self.o_no = ctk.CTkButton(self.o_frame, text="No", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 18, "bold"),width=70, height=70, 
+                                  border_width=2, border_color="#000000", command=self.no_button)
+        self.o_no.place(rely=0.4, relx=0.8, anchor="center")
+        
+        self.no_label = ctk.CTkLabel(self.o_frame, text="I don't want reminders \nto take care of my eyes", text_color="#000000")
+        self.no_label.place(rely=0.65, relx=0.8, anchor="center")
+        
+    def yes_button(self):
+        self.timer_window = TimerWindow(self.root, self.shared_data)
+        self.timer_window.reset_buttons()
+        self.hide_widgets([self.o_frame])
+        
+    def hide_widgets(self, widgets):
+        for widget in widgets:
+            widget.place_forget()
+            
+    def no_button(self):
+        self.hide_widgets([self.o_frame])
+        self.o1_window = Option1(self.root, self.shared_data)
+        self.root.withdraw()
+        
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        
+class Option1:
+    def __init__(self, root, shared_data):
+        self.root = Toplevel(root)
+        self.shared_data = shared_data
+        self.root.geometry("500x300")
+        self.center_window(500, 300)
+        self.root.configure(bg="#d9a7e0")
+        
+        self.o1_frame = ctk.CTkFrame(self.root, height=240, width=400,  fg_color="#e6c9f5")
+        self.o1_frame.place(rely=0.5, relx=0.5, anchor="center")
+        
+        self.o1_label = ctk.CTkLabel(self.o1_frame, text="Are You Sure You Don't Want To \nTake Care of Your Eyes?", text_color="#FF0000", font=("Arial", 24,"bold"))
+        self.o1_label.place(rely=0.1, relx=0.5, anchor="center")
+        
+        self.o1_yes = ctk.CTkButton(self.o1_frame, text="Yes", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 18, "bold"),width=70, height=70, 
+                                   border_width=2, border_color="#000000", command=self.yes_button)
+        self.o1_yes.place(rely=0.4, relx=0.8, anchor="center")
+        
+        self.yes_label = ctk.CTkLabel(self.o1_frame, text="I changed my mind. Let's \ntake care of my eyes", text_color="#000000")
+        self.yes_label.place(rely=0.65, relx=0.2, anchor="center")
+        
+        self.o1_no = ctk.CTkButton(self.o1_frame, text="No", fg_color="#e6c9f5", text_color="#000000", font=("A ", 18, "bold"),width=70, height=70, 
+                                  border_width=2, border_color="#000000", command=self.no_button)
+        self.o1_no.place(rely=0.4, relx=0.2, anchor="center")
+        
+        self.no_label = ctk.CTkLabel(self.o1_frame, text="I don't want to take \ncare of my eyes", text_color="#000000")
+        self.no_label.place(rely=0.65, relx=0.8, anchor="center")
+        
+    def yes_button(self):
+        self.hide_widgets([self.o1_frame])
+        self.fo_window = FOption(self.root, self.shared_data)
+        self.root.withdraw()
+    
+    def no_button(self):
+        self.hide_widgets([self.o1_frame])
+        self.timer_window = TimerWindow(self.root, self.shared_data)
+        self.timer_window.reset_buttons()
+    
+    def hide_widgets(self, widgets):
+        for widget in widgets:
+            widget.place_forget()
+        
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        
+class FOption:
+    def __init__(self,root, shared_data):
+        self.root = Toplevel(root)
+        self.shared_data = shared_data
+        self.root.geometry("500x300")
+        self.center_window(500, 300)
+        self.root.configure(bg="#d9a7e0")
+        
+        self.fo_frame = ctk.CTkFrame(self.root, height=240, width=400,  fg_color="#e6c9f5")
+        self.fo_frame.place(rely=0.5, relx=0.5, anchor="center")
+        
+        self.fo_label = ctk.CTkLabel(self.fo_frame, text="You Might Develop One Of The Following: ", text_color="#000000", font=("Arial", 20,"bold"))
+        self.fo_label.place(rely=0.1, relx=0.5, anchor="center")
+        
+        self.fo_d = ctk.CTkLabel(self.fo_frame, text="Eye Strains|Dry Eyes|Eye Fatigue|Blurred Vision", text_color="#FF0000", font=("Arial", 15, "bold"))
+        self.fo_d.place(rely=0.2, relx=0.5, anchor="center")
+        
+        self.fo_yes = ctk.CTkButton(self.fo_frame, text="Yes", fg_color="#e6c9f5", text_color="#000000", font=("Arial", 18, "bold"),width=70, height=70, 
+                                   border_width=2, border_color="#000000",)
+        self.fo_yes.place(rely=0.4, relx=0.8, anchor="center")
+        
+        self.yes_label = ctk.CTkLabel(self.fo_frame, text="I changed my mind. Let's \ntake care of my eyes", text_color="#000000")
+        self.yes_label.place(rely=0.65, relx=0.2, anchor="center")
+        
+        self.fo_no = ctk.CTkButton(self.fo_frame, text="No", fg_color="#e6c9f5", text_color="#000000", font=("A ", 18, "bold"),width=70, height=70, 
+                                  border_width=2, border_color="#000000",)
+        self.fo_no.place(rely=0.4, relx=0.2, anchor="center")
+        
+        self.no_label = ctk.CTkLabel(self.fo_frame, text="I don't want to take \ncare of my eyes", text_color="#000000")
+        self.no_label.place(rely=0.65, relx=0.8, anchor="center")
+        
+        
+    def yes_button(self):
+        self.root.destroy()
+        
+    def no_button(self):
+        self.hide_widgets([self.fo_frame])
+        self.timer_window = TimerWindow(self.root, self.shared_data)
+        self.timer_window.reset_buttons()
+        
+    def hide_widgets(self, widgets):
+        for widget in widgets:
+            widget.place_forget()
+        
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        
+        
 class Ringtone:
     def __init__(self, root, shared_data):
         self.root = Toplevel(root)
@@ -301,8 +696,8 @@ class Ringtone:
         root.grid_columnconfigure(0, weight=1)
         root.grid_columnconfigure(1, weight=0)
 
-        self.add_image = ctk.CTkImage(Image.open('Images\Add.png'), size=(50,50))
-        self.random_icon = ctk.CTkImage(Image.open('Images\pngegg.png'), size=(50,50))
+        self.add_image = ctk.CTkImage(Image.open(r'Images\Add.png'), size=(50,50))
+        self.random_icon = ctk.CTkImage(Image.open(r'Images\pngegg.png'), size=(50,50))
         
         self.question_label = ctk.CTkButton(self.root, text="?", font=("Arial", 30, "bold"), corner_radius=100, height=40, width=40, fg_color="#000000")
         self.question_label.place(relx=0.05, rely=0.15, anchor="w")

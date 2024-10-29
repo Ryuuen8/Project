@@ -109,7 +109,7 @@ class TimerWindow:
 
         self.question_label = ctk.CTkButton(self.root, text="?", font=("Comic Sans MS", 30, "bold"), corner_radius=100, height=40, width=40, fg_color="#000000",
                                             command=self.question_button)
-        self.question_label.place(relx=0.02, rely=0.19, anchor="w")
+        self.question_label.place(relx=0.03, rely=0.19, anchor="w")
 
 
         self.frame = ctk.CTkFrame(self.root, height=100, width=300)
@@ -129,6 +129,7 @@ class TimerWindow:
             text_color="#000000",
             border_color="#000000",
             border_width=2,
+            hover_color="#30f9e1"
         )
         self.main_label.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -143,7 +144,8 @@ class TimerWindow:
             height=100, 
             width=150,
             border_width=2,
-            command=self.start_timer
+            command=self.start_timer,
+            hover_color="#54ec82"
         )
         self.no_button = ctk.CTkButton(
             self.frame, 
@@ -156,7 +158,8 @@ class TimerWindow:
             height=100, 
             width=150,
             border_width=2,
-            command=self.reset_buttons
+            command=self.reset_buttons,
+            hover_color="#f93030"
         )
 
         '''self.reset_button = ctk.CTkButton(self.root, text="Reset", font=("Arial", 14),command=self.reset_timer, 
@@ -179,6 +182,7 @@ class TimerWindow:
         self.running = False
         self.elapsed_time = 10
         self.current_song = None
+        
         
     def question_button(self):
         self.label1.configure(text="The 20-20-20 rule suggests that every 20 minutes, \nyou take a 20-second break to look at something \n20 feet away to reduce eye strain.",
@@ -224,21 +228,24 @@ class TimerWindow:
 
     def on_enter(self, event):
         if not self.timer_running:
-            self.main_label.place_forget()
-            self.show_buttons()
+            # Delay the display of the buttons by 1000 milliseconds (1 second)
+            self.hover_delay_id = self.frame.after(300, self.show_buttons)
             
     def on_enter_button(self, event):
         pass
 
     def show_buttons(self):
+        self.main_label.place_forget()
         self.yes_button.place(relx=0.5, rely=0.5, anchor="e")
         self.no_button.place(relx=1, rely=0.5, anchor="e")
 
     def reset_buttons(self):
-        self.yes_button.place_forget()
-        self.no_button.place_forget()
+        if hasattr(self, 'hover_delay_id'):
+            self.frame.after_cancel(self.hover_delay_id)
         self.main_label.configure()
         self.main_label.place(relx=0.5, rely=0.5, anchor="center")
+        self.yes_button.place_forget()
+        self.no_button.place_forget()
         
     def on_leave(self, event):
             pass
@@ -267,6 +274,8 @@ class TimerWindow:
         elif self.elapsed_time <= 0:
             self.main_label.configure(text="Time's Up")
             self.pop_up_window = TimeUp(self.root, self.shared_data)
+            pygame.mixer.music.load("Musics/telolet_rem_truk_bus.mp3")
+            pygame.mixer.music.play()
             self.root.withdraw()
             if self.shared_data.current_song and os.path.exists(self.shared_data.current_song):
                 pygame.mixer.music.load(self.shared_data.current_song)
@@ -284,6 +293,10 @@ class TimerWindow:
             if self.elapsed_time <= 0:
                 return
             self.running = True
+            self.yes_button.place_forget()
+            self.no_button.place_forget()
+            self.main_label.configure()
+            self.main_label.place(relx=0.5, rely=0.5, anchor="center")
             self.update_timer()
 
     def pause_timer(self):
@@ -329,31 +342,22 @@ class TimerWindow:
         self.notification = Toplevel(self.root)
         self.notification.overrideredirect(True)
         self.notification.attributes("-topmost", True)
-        self.notification.geometry("300x100")
+        self.notification.geometry("500x100")
         self.notification.configure(background="#d9a7e0")
         self.notification.attributes("-alpha", 0)
 
-        self.rounded_frame = ctk.CTkFrame(
-            self.notification,
-            width=200,
-            height=250,
-            corner_radius=100,  
-            fg_color="#d9a7e0"
-        )
-        self.rounded_frame.pack(fill="both", expand=True)
+        self.n_frame = ctk.CTkFrame(self.notification, fg_color="#e6c9f5", height=60, width=400)
+        self.n_frame.place(rely=0.5, relx=0.5, anchor="center")
 
-        self.n_frame = ctk.CTkFrame(self.rounded_frame, fg_color="#e6c9f5", height=50, width=200)
-        self.n_frame.place(rely=0.4, relx=0.5, anchor="center")
-
-        self.label = ctk.CTkLabel(self.n_frame, text="Time is running out!", font=("Comic Sans MS", 15, "bold"))
+        self.label = ctk.CTkLabel(self.n_frame, text="TIME’S ALMOST UP! GET READY FOR YOUR BREAK", font=("Comic Sans MS", 15, "bold"))
         self.label.place(rely=0.5, relx=0.5, anchor="center")
 
-        self.t_label = ctk.CTkLabel(self.rounded_frame, text="", font=("Arial", 10, "bold"), height=10)
-        self.t_label.place(rely=0.8, relx=0.7, anchor="center")
+        self.t_label = ctk.CTkLabel(self.notification, text="", font=("Arial", 10, "bold"), height=10)
+        self.t_label.place(rely=0.9, relx=0.8, anchor="center")
 
         screen_height = self.notification.winfo_screenheight()
         y_position = screen_height // 15
-        self.notification.geometry(f"300x100+{self.notification.winfo_screenwidth() // 2 - 150}+{y_position}")
+        self.notification.geometry(f"500x100+{self.notification.winfo_screenwidth() // 2 - 250}+{y_position}")
 
         self.fade_in()
 
@@ -655,19 +659,33 @@ class Option:
         self.o_label = ctk.CTkLabel(self.o_frame, text=r"Let's take care of your eyes again!", font=("Comic Sans MS", 20, "bold"))
         self.o_label.place(relx=0.5, rely=0.1, anchor="center")
         
-        self.o_yes = ctk.CTkButton(self.o_frame, text="Yes", fg_color="#e6c9f5", text_color="#000000", font=("Comic Sans MS", 18, "bold"),width=70, height=70, 
-                                   border_width=2, border_color="#000000", command=self.yes_button)
-        self.o_yes.place(rely=0.4, relx=0.2, anchor="center")
+        self.o_yes = ctk.CTkButton(self.o_frame, text="YES", fg_color="#e6c9f5", text_color="#000000", font=("Comic Sans MS", 25, "bold"),width=180, height=100, 
+                                   border_width=2, border_color="#000000", command=self.yes_button, hover_color="#e6c9f5", border_spacing=10)
+        self.o_yes.place(rely=0.5, relx=0.3, anchor="center")
             
-        self.yes_label = ctk.CTkLabel(self.o_frame, text="Let's take care \nof my eyes", text_color="#000000")
-        self.yes_label.place(rely=0.65, relx=0.2, anchor="center")
+        self.yes_label = ctk.CTkLabel(self.o_frame, text="Let's take care \nof my eyes", text_color="#000000",font=("Comic Sans MS", 14, "bold"))
+        self.yes_label.place(rely=0.75, relx=0.3, anchor="center")
         
-        self.o_no = ctk.CTkButton(self.o_frame, text="No", fg_color="#e6c9f5", text_color="#000000", font=("Comic Sans MS", 18, "bold"),width=70, height=70, 
-                                  border_width=2, border_color="#000000", command=self.no_button)
-        self.o_no.place(rely=0.4, relx=0.8, anchor="center")
+        self.o_no = ctk.CTkButton(self.o_frame, text="No", fg_color="#e6c9f5", text_color="#000000", font=("Comic Sans MS", 18, "bold"),width=50, height=50, 
+                                  border_width=2, border_color="#000000", command=self.no_button, hover_color="#f93030")
+        self.o_no.place(rely=0.5, relx=0.8, anchor="center")
         
-        self.no_label = ctk.CTkLabel(self.o_frame, text="I don't want reminders \nto take care of my eyes", text_color="#000000")
-        self.no_label.place(rely=0.65, relx=0.8, anchor="center")
+        self.no_label = ctk.CTkLabel(self.o_frame, text="I don't want reminders to \ntake care of my eyes", text_color="#000000", font=("Comic Sans MS", 10, "bold"),
+                                     justify="center")
+        self.no_label.place(rely=0.7, relx=0.8, anchor="center")
+        
+        self.o_yes.bind("<Enter>", self.on_enter)
+        self.o_yes.bind("<Leave>", self.on_leave)
+        
+    def on_enter(self, event):
+        self.o_yes.configure(fg_color="#e6c9f5")  # Set to match the window background color
+        self.o_yes.configure(border_width=2, border_color="#39f930")  # Define a border width to make it more visible
+        self.yes_label.configure(text_color="#22831d")
+        
+    def on_leave(self, event):
+        self.o_yes.configure(fg_color="#e6c9f5")  # Reset to original background color or as preferred
+        self.o_yes.configure(border_width=2, border_color="#000000")
+        self.yes_label.configure(text_color="#000000")
         
     def yes_button(self):
         self.timer_window = TimerWindow(self.root, self.shared_data)
@@ -830,6 +848,7 @@ class Ringtone:
             self.frame,
             text=f"",
             font=("Arial", 10, "bold"),
+            wraplength=100
         )
 
         self.ringtone_label.place(relx=0.5, rely=0.5, anchor="center")
@@ -971,13 +990,10 @@ class Ringtone:
         song_path = filedialog.askopenfilename(title="Select a Song", filetypes=(("MP3 Files", "*.mp3"), ("All Files", "*.*")))
         if song_path:
             print(f"Selected song path: {song_path}")
-            ringtone_number = len(self.shared_data.ringtones) + 1
-            ringtone_name = f"Ringtone {ringtone_number}"
+            song_name = os.path.basename(song_path)
             self.shared_data.songs.append(song_path)
-            self.shared_data.ringtones.append(ringtone_name)
+            self.shared_data.ringtones.append(os.path.splitext(os.path.basename(song_path)))
             self.save_song(song_path)
-            self.update_ringtone()
-
 
     def center_window(self, width, height):
         screen_width = self.root.winfo_screenwidth()
